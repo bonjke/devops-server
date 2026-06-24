@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevOps Center</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 DevOps Center</h1>
+            <p class="subtitle">Infrastructure Management Console</p>
+            <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <a href="droplets.html" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #0080ff 0%, #0066cc 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,128,255,0.3); transition: all 0.3s;">
+                    ☁️ Manage Droplets
+                </a>
+                <a href="jira.html" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #0052cc 0%, #0043a8 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,82,204,0.3); transition: all 0.3s;">
+                    🎫 Jira Management
+                </a>
+                <a href="https://cloud.digitalocean.com" target="_blank" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 12px rgba(102,126,234,0.3); transition: all 0.3s;">
+                    🌐 DO Console
+                </a>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="task-creator">Task Creator</button>
+            <button class="tab-button" data-tab="servers">Servers</button>
+            <button class="tab-button" data-tab="services">Services</button>
+            <button class="tab-button" data-tab="tasks">Tasks</button>
+        </div>
+
+        <!-- Task Creator Tab -->
+        <div id="task-creator" class="tab-content active">
+            <h2>Create Task</h2>
+            
+            <div class="form-group">
+                <label>Action Type:</label>
+                <select id="action-type">
+                    <option value="local_command">Local Command</option>
+                    <option value="ssh_command">SSH Command</option>
+                    <option value="chain">Chain Tasks</option>
+                    <option value="do_droplet_list">DO: List Droplets</option>
+                    <option value="do_droplet_create">DO: Create Droplet</option>
+                    <option value="jira_update">Jira Update</option>
+                </select>
+            </div>
+
+            <!-- Local Command -->
+            <div id="params-local_command" class="params-section">
+                <div class="form-group">
+                    <label>Command:</label>
+                    <input type="text" id="local-command" placeholder="docker ps -a" />
+                </div>
+                <div class="form-group">
+                    <label>Working Directory (optional):</label>
+                    <input type="text" id="local-cwd" placeholder="/path/to/dir" />
+                </div>
+                <div class="form-group">
+                    <label>Timeout (seconds):</label>
+                    <input type="number" id="local-timeout" value="300" />
+                </div>
+            </div>
+
+            <!-- SSH Command -->
+            <div id="params-ssh_command" class="params-section" style="display:none;">
+                <div class="form-group">
+                    <label>Server ID:</label>
+                    <select id="ssh-server"></select>
+                </div>
+                <div class="form-group">
+                    <label>Command:</label>
+                    <input type="text" id="ssh-command" placeholder="systemctl status nginx" />
+                </div>
+                <div class="form-group">
+                    <label>Timeout (seconds):</label>
+                    <input type="number" id="ssh-timeout" value="300" />
+                </div>
+            </div>
+
+            <!-- Chain Tasks -->
+            <div id="params-chain" class="params-section" style="display:none;">
+                <p class="info">Chain tasks will be executed sequentially. Use JSON format.</p>
+                <div class="form-group">
+                    <label>Tasks JSON Array:</label>
+                    <textarea id="chain-tasks" rows="10" placeholder='[{"action":"local_command","params":{"command":"echo test"}}]'></textarea>
+                </div>
+            </div>
+
+            <!-- DO Droplet List -->
+            <div id="params-do_droplet_list" class="params-section" style="display:none;">
+                <p class="info">List all Digital Ocean droplets</p>
+                <div class="form-group">
+                    <label>Filter by Tag (optional):</label>
+                    <input type="text" id="do-list-tag" placeholder="production" />
+                </div>
+            </div>
+
+            <!-- DO Droplet Create -->
+            <div id="params-do_droplet_create" class="params-section" style="display:none;">
+                <div class="form-group">
+                    <label>Droplet Name: <span style="color:red;">*</span></label>
+                    <input type="text" id="do-create-name" placeholder="web-server-01" required />
+                </div>
+                
+                <div class="form-group">
+                    <label>Region: 
+                        <button type="button" onclick="loadDORegions()" class="btn btn-sm" style="margin-left: 10px;">🔄 Load Regions</button>
+                    </label>
+                    <select id="do-create-region">
+                        <option value="nyc3">NYC3 - New York</option>
+                        <option value="sfo3">SFO3 - San Francisco</option>
+                        <option value="ams3">AMS3 - Amsterdam</option>
+                        <option value="sgp1">SGP1 - Singapore</option>
+                        <option value="lon1">LON1 - London</option>
+                        <option value="fra1">FRA1 - Frankfurt</option>
+                        <option value="tor1">TOR1 - Toronto</option>
+                        <option value="blr1">BLR1 - Bangalore</option>
+                    </select>
+                    <span id="region-loading" style="display:none; color: #666;">Loading...</span>
+                </div>
+                
+                <div class="form-group">
+                    <label>Size:
+                        <button type="button" onclick="loadDOSizes()" class="btn btn-sm" style="margin-left: 10px;">🔄 Load Sizes</button>
+                    </label>
+                    <select id="do-create-size">
+                        <option value="s-1vcpu-1gb">Basic: 1 vCPU, 1GB RAM ($6/mo)</option>
+                        <option value="s-1vcpu-2gb">Basic: 1 vCPU, 2GB RAM ($12/mo)</option>
+                        <option value="s-2vcpu-2gb">Basic: 2 vCPU, 2GB RAM ($18/mo)</option>
+                        <option value="s-2vcpu-4gb">Basic: 2 vCPU, 4GB RAM ($24/mo)</option>
+                        <option value="s-4vcpu-8gb">Basic: 4 vCPU, 8GB RAM ($48/mo)</option>
+                    </select>
+                    <span id="size-loading" style="display:none; color: #666;">Loading...</span>
+                </div>
+                
+                <div class="form-group">
+                    <label>Image:
+                        <button type="button" onclick="loadDOImages()" class="btn btn-sm" style="margin-left: 10px;">🔄 Load Images</button>
+                    </label>
+                    <select id="do-create-image">
+                        <option value="ubuntu-22-04-x64">Ubuntu 22.04 LTS x64</option>
+                        <option value="ubuntu-20-04-x64">Ubuntu 20.04 LTS x64</option>
+                        <option value="debian-11-x64">Debian 11 x64</option>
+                        <option value="centos-stream-9-x64">CentOS Stream 9 x64</option>
+                        <option value="fedora-39-x64">Fedora 39 x64</option>
+                        <option value="rocky-9-x64">Rocky Linux 9 x64</option>
+                    </select>
+                    <span id="image-loading" style="display:none; color: #666;">Loading...</span>
+                </div>
+                
+                <div class="form-group">
+                    <label>Tags (comma-separated):</label>
+                    <input type="text" id="do-create-tags" placeholder="production,web" />
+                </div>
+                
+                <div class="form-group">
+                    <label>SSH Keys:
+                        <button type="button" onclick="loadDOSSHKeys()" class="btn btn-sm" style="margin-left: 10px;">🔄 Load SSH Keys</button>
+                    </label>
+                    <select id="do-create-ssh-keys" multiple size="3">
+                        <option value="">No SSH keys (will use password)</option>
+                    </select>
+                    <small style="color: #666;">Hold Ctrl/Cmd to select multiple</small>
+                    <span id="ssh-keys-loading" style="display:none; color: #666;">Loading...</span>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button onclick="generateTaskJSON()" class="btn btn-primary">Generate JSON</button>
+                <button onclick="submitTask()" class="btn btn-success">Create & Execute</button>
+            </div>
+
+            <div id="json-output" class="json-output" style="display:none;">
+                <h3>Generated JSON:</h3>
+                <pre id="json-content"></pre>
+                <button onclick="copyJSON()" class="btn btn-secondary">Copy to Clipboard</button>
+                <button onclick="saveAsFile()" class="btn btn-secondary">Save as File</button>
+            </div>
+        </div>
+
+        <!-- Servers Tab -->
+        <div id="servers" class="tab-content">
+            <div class="header-actions">
+                <h2>Servers</h2>
+                <button onclick="showAddServerForm()" class="btn btn-primary">+ Add Server</button>
+            </div>
+            <div id="servers-list" class="items-list"></div>
+        </div>
+
+        <!-- Services Tab -->
+        <div id="services" class="tab-content">
+            <div class="header-actions">
+                <h2>Services</h2>
+                <button onclick="showAddServiceForm()" class="btn btn-primary">+ Add Service</button>
+            </div>
+            <div id="services-list" class="items-list"></div>
+        </div>
+
+        <!-- Tasks Tab -->
+        <div id="tasks" class="tab-content">
+            <div class="header-actions">
+                <h2>Tasks History</h2>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <select id="status-filter" onchange="loadTasks()">
+                        <option value="">All Statuses</option>
+                        <option value="completed">Completed</option>
+                        <option value="failed">Failed</option>
+                        <option value="processing">Processing</option>
+                    </select>
+                    <button onclick="loadTasks()" class="btn btn-secondary">🔄 Refresh</button>
+                </div>
+            </div>
+            <div id="tasks-list" class="items-list"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

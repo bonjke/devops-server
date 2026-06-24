@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Ocean Droplets - DevOps Center</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .search-bar {
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 12px 45px 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .search-bar input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-bar::after {
+            content: "🔍";
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .filter-select:hover {
+            border-color: #667eea;
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .stat-icon {
+            font-size: 3em;
+            width: 70px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+        }
+
+        .stat-icon.active { background: #e8f5e9; }
+        .stat-icon.total { background: #e3f2fd; }
+        .stat-icon.cost { background: #fff3e0; }
+        .stat-icon.off { background: #ffebee; }
+
+        .stat-info h3 {
+            color: #999;
+            font-size: 0.9em;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .stat-info .value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .droplets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .droplet-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .droplet-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            border-color: #667eea;
+        }
+
+        .droplet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .droplet-name {
+            font-size: 1.4em;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .droplet-id {
+            font-size: 0.85em;
+            color: #999;
+            font-family: 'Courier New', monospace;
+        }
+
+        .status-badge {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-active {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-off {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .status-new {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .droplet-info {
+            margin: 20px 0;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #666;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-value {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .ip-address {
+            font-family: 'Courier New', monospace;
+            background: #f5f5f5;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .ip-address:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .droplet-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 15px 0;
+        }
+
+        .tag {
+            background: #f0f0f0;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .droplet-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95em;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+
+        .btn-info {
+            background: #2196f3;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #757575;
+            color: white;
+        }
+
+        .btn-outline {
+            background: white;
+            border: 2px solid #e0e0e0;
+            color: #666;
+        }
+
+        .btn-outline:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .btn-create {
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.1em;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: white;
+            font-size: 1.3em;
+        }
+
+        .loading::after {
+            content: "...";
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: "."; }
+            40% { content: ".."; }
+            60%, 100% { content: "..."; }
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #c62828;
+        }
+
+        .success-message {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #2e7d32;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+
+        .empty-state-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .empty-state p {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            margin-bottom: 30px;
+        }
+
+        .modal-header h2 {
+            color: #333;
+            font-size: 2em;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .form-actions .btn {
+            flex: 1;
+        }
+
+        @media (max-width: 768px) {
+            .droplets-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-bar {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>☁️ Digital Ocean Droplets</h1>
+            <p class="subtitle">Manage your cloud infrastructure</p>
+            
+            <div class="header-actions">
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="Search droplets by name, IP, or region..." onkeyup="filterDroplets()">
+                </div>
+                
+                <div class="filters">
+                    <select class="filter-select" id="statusFilter" onchange="filterDroplets()">
+                        <option value="">All Statuses</option>
+                        <option value="active">Active</option>
+                        <option value="off">Off</option>
+                        <option value="new">New</option>
+                    </select>
+                    
+                    <select class="filter-select" id="regionFilter" onchange="filterDroplets()">
+                        <option value="">All Regions</option>
+                    </select>
+                    
+                    <button class="btn btn-outline" onclick="loadDroplets()">
+                        🔄 Refresh
+                    </button>
+                    
+                    <button class="btn btn-primary" onclick="showCreateModal()">
+                        ➕ Create Droplet
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-icon active">✅</div>
+                <div class="stat-info">
+                    <h3>Active Droplets</h3>
+                    <div class="value" id="activeCount">0</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon total">📊</div>
+                <div class="stat-info">
+                    <h3>Total Droplets</h3>
+                    <div class="value" id="totalCount">0</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon cost">💰</div>
+                <div class="stat-info">
+                    <h3>Est. Monthly Cost</h3>
+                    <div class="value" id="monthlyCost">$0</div>
+                </div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon off">🔴</div>
+                <div class="stat-info">
+                    <h3>Powered Off</h3>
+                    <div class="value" id="offCount">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="loading">
+            Loading droplets
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" style="display:none;"></div>
+
+        <!-- Droplets Grid -->
+        <div id="dropletsGrid" class="droplets-grid" style="display:none;"></div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="empty-state" style="display:none;">
+            <div class="empty-state-icon">🏝️</div>
+            <h2>No Droplets Found</h2>
+            <p>Create your first droplet to get started with Digital Ocean</p>
+            <button class="btn btn-create" onclick="showCreateModal()">
+                ➕ Create Your First Droplet
+            </button>
+        </div>
+    </div>
+
+    <!-- Create Droplet Modal -->
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New Droplet</h2>
+            </div>
+            
+            <div class="form-group">
+                <label>Droplet Name *</label>
+                <input type="text" id="dropletName" placeholder="web-server-01" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Region *</label>
+                <select id="dropletRegion">
+                    <option value="nyc3">New York 3</option>
+                    <option value="sfo3">San Francisco 3</option>
+                    <option value="ams3">Amsterdam 3</option>
+                    <option value="sgp1">Singapore 1</option>
+                    <option value="lon1">London 1</option>
+                    <option value="fra1">Frankfurt 1</option>
+                    <option value="tor1">Toronto 1</option>
+                    <option value="blr1">Bangalore 1</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Size *</label>
+                <select id="dropletSize">
+                    <option value="s-1vcpu-1gb">1 vCPU, 1GB RAM - $6/mo</option>
+                    <option value="s-1vcpu-2gb">1 vCPU, 2GB RAM - $12/mo</option>
+                    <option value="s-2vcpu-2gb">2 vCPU, 2GB RAM - $18/mo</option>
+                    <option value="s-2vcpu-4gb">2 vCPU, 4GB RAM - $24/mo</option>
+                    <option value="s-4vcpu-8gb">4 vCPU, 8GB RAM - $48/mo</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Image *</label>
+                <select id="dropletImage">
+                    <option value="ubuntu-22-04-x64">Ubuntu 22.04 LTS</option>
+                    <option value="ubuntu-20-04-x64">Ubuntu 20.04 LTS</option>
+                    <option value="debian-11-x64">Debian 11</option>
+                    <option value="centos-stream-9-x64">CentOS Stream 9</option>
+                    <option value="fedora-39-x64">Fedora 39</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Tags (comma-separated)</label>
+                <input type="text" id="dropletTags" placeholder="production, web, nginx">
+            </div>
+            
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="hideCreateModal()">Cancel</button>
+                <button class="btn btn-success" onclick="createDroplet()">Create Droplet</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        let allDroplets = [];
+
+        // Load droplets on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadDroplets();
+        });
+
+        async function loadDroplets() {
+            const loadingState = document.getElementById('loadingState');
+            const errorState = document.getElementById('errorState');
+            const dropletsGrid = document.getElementById('dropletsGrid');
+            const emptyState = document.getElementById('emptyState');
+
+            loadingState.style.display = 'block';
+            errorState.style.display = 'none';
+            dropletsGrid.style.display = 'none';
+            emptyState.style.display = 'none';
+
+            try {
+                const response = await fetch(`${API_BASE}/do/droplets`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to load droplets');
+                }
+
+                allDroplets = data.droplets || [];
+                loadingState.style.display = 'none';
+
+                if (allDroplets.length === 0) {
+                    emptyState.style.display = 'block';
+                } else {
+                    dropletsGrid.style.display = 'grid';
+                    renderDroplets(allDroplets);
+                    updateStats(allDroplets);
+                    populateRegionFilter(allDroplets);
+                }
+            } catch (error) {
+                console.error('Error loading droplets:', error);
+                loadingState.style.display = 'none';
+                errorState.style.display = 'block';
+                errorState.className = 'error-message';
+                errorState.innerHTML = `
+                    <strong>❌ Error loading droplets</strong><br>
+                    ${error.message}<br>
+                    <small>Make sure your DO_API_TOKEN is configured in .env file</small>
+                `;
+            }
+        }
+
+        function renderDroplets(droplets) {
+            const grid = document.getElementById('dropletsGrid');
+            grid.innerHTML = '';
+
+            droplets.forEach(droplet => {
+                const card = createDropletCard(droplet);
+                grid.appendChild(card);
+            });
+        }
+
+        function createDropletCard(droplet) {
+            const card = document.createElement('div');
+            card.className = 'droplet-card';
+            card.dataset.name = droplet.name.toLowerCase();
+            card.dataset.region = droplet.region.slug;
+            card.dataset.status = droplet.status;
+
+            const statusClass = droplet.status === 'active' ? 'status-active' : 
+                               droplet.status === 'off' ? 'status-off' : 'status-new';
+
+            const publicIP = droplet.networks?.v4?.find(n => n.type === 'public')?.ip_address || 'N/A';
+            const privateIP = droplet.networks?.v4?.find(n => n.type === 'private')?.ip_address || 'N/A';
+
+            card.innerHTML = `
+                <div class="droplet-header">
+                    <div>
+                        <div class="droplet-name">${droplet.name}</div>
+                        <div class="droplet-id">ID: ${droplet.id}</div>
+                    </div>
+                    <span class="status-badge ${statusClass}">${droplet.status}</span>
+                </div>
+
+                <div class="droplet-info">
+                    <div class="info-row">
+                        <span class="info-label">🌍 Region</span>
+                        <span class="info-value">${droplet.region.name}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">💾 Size</span>
+                        <span class="info-value">${droplet.size.description || droplet.size_slug}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">💻 Image</span>
+                        <span class="info-value">${droplet.image.distribution} ${droplet.image.name}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">🌐 Public IP</span>
+                        <span class="info-value">
+                            <span class="ip-address" onclick="copyToClipboard('${publicIP}')" title="Click to copy">
+                                ${publicIP}
+                            </span>
+                        </span>
+                    </div>
+                    ${privateIP !== 'N/A' ? `
+                    <div class="info-row">
+                        <span class="info-label">🔒 Private IP</span>
+                        <span class="info-value">
+                            <span class="ip-address" onclick="copyToClipboard('${privateIP}')" title="Click to copy">
+                                ${privateIP}
+                            </span>
+                        </span>
+                    </div>
+                    ` : ''}
+                    <div class="info-row">
+                        <span class="info-label">💰 Cost</span>
+                        <span class="info-value">$${droplet.size.price_monthly}/mo</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">📅 Created</span>
+                        <span class="info-value">${new Date(droplet.created_at).toLocaleDateString()}</span>
+                    </div>
+                </div>
+
+                ${droplet.tags && droplet.tags.length > 0 ? `
+                <div class="droplet-tags">
+                    ${droplet.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                </div>
+                ` : ''}
+
+                <div class="droplet-actions">
+                    <button class="btn btn-info" onclick="viewDropletDetails(${droplet.id})">
+                        📊 Details
+                    </button>
+                    <button class="btn btn-success" onclick="sshToDroplet('${publicIP}')">
+                        🔑 SSH
+                    </button>
+                    <button class="btn btn-secondary" onclick="powerAction(${droplet.id}, '${droplet.status}')">
+                        ${droplet.status === 'active' ? '⏸️ Power Off' : '▶️ Power On'}
+                    </button>
+                    <button class="btn btn-danger" onclick="deleteDroplet(${droplet.id}, '${droplet.name}')">
+                        🗑️ Delete
+                    </button>
+                </div>
+            `;
+
+            return card;
+        }
+
+        function updateStats(droplets) {
+            const activeCount = droplets.filter(d => d.status === 'active').length;
+            const offCount = droplets.filter(d => d.status === 'off').length;
+            const totalCost = droplets.reduce((sum, d) => sum + (d.size.price_monthly || 0), 0);
+
+            document.getElementById('activeCount').textContent = activeCount;
+            document.getElementById('totalCount').textContent = droplets.length;
+            document.getElementById('monthlyCost').textContent = `$${totalCost.toFixed(2)}`;
+            document.getElementById('offCount').textContent = offCount;
+        }
+
+        function populateRegionFilter(droplets) {
+            const regions = [...new Set(droplets.map(d => d.region.slug))];
+            const select = document.getElementById('regionFilter');
+            
+            regions.forEach(region => {
+                const option = document.createElement('option');
+                option.value = region;
+                option.textContent = region.toUpperCase();
+                select.appendChild(option);
+            });
+        }
+
+        function filterDroplets() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const regionFilter = document.getElementById('regionFilter').value;
+
+            const filtered = allDroplets.filter(droplet => {
+                const matchesSearch = droplet.name.toLowerCase().includes(searchTerm) ||
+                                    (droplet.networks?.v4?.find(n => n.type === 'public')?.ip_address || '').includes(searchTerm) ||
+                                    droplet.region.slug.toLowerCase().includes(searchTerm);
+                
+                const matchesStatus = !statusFilter || droplet.status === statusFilter;
+                const matchesRegion = !regionFilter || droplet.region.slug === regionFilter;
+
+                return matchesSearch && matchesStatus && matchesRegion;
+            });
+
+            renderDroplets(filtered);
+            updateStats(filtered);
+
+            document.getElementById('emptyState').style.display = filtered.length === 0 ? 'block' : 'none';
+            document.getElementById('dropletsGrid').style.display = filtered.length > 0 ? 'grid' : 'none';
+        }
+
+        function showCreateModal() {
+            document.getElementById('createModal').classList.add('show');
+        }
+
+        function hideCreateModal() {
+            document.getElementById('createModal').classList.remove('show');
+        }
+
+        async function createDroplet() {
+            const name = document.getElementById('dropletName').value.trim();
+            const region = document.getElementById('dropletRegion').value;
+            const size = document.getElementById('dropletSize').value;
+            const image = document.getElementById('dropletImage').value;
+            const tagsInput = document.getElementById('dropletTags').value;
+            const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()) : [];
+
+            if (!name) {
+                alert('Please enter a droplet name');
+                return;
+            }
+
+            const taskData = {
+                task_id: `create-droplet-${Date.now()}`,
+                action: 'do_create_droplet',
+                params: {
+                    name: name,
+                    region: region,
+                    size: size,
+                    image: image,
+                    tags: tags
+                }
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/tasks`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(taskData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to create droplet');
+                }
+
+                hideCreateModal();
+                showSuccessMessage('Droplet creation initiated! Refreshing in 5 seconds...');
+                
+                setTimeout(() => {
+                    loadDroplets();
+                }, 5000);
+
+            } catch (error) {
+                alert('Error creating droplet: ' + error.message);
+            }
+        }
+
+        async function deleteDroplet(dropletId, dropletName) {
+            if (!confirm(`Are you sure you want to delete droplet "${dropletName}"?\n\nThis action cannot be undone!`)) {
+                return;
+            }
+
+            const taskData = {
+                task_id: `delete-droplet-${Date.now()}`,
+                action: 'do_delete_droplet',
+                params: {
+                    droplet_id: dropletId
+                }
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/tasks`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(taskData)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to delete droplet');
+                }
+
+                showSuccessMessage('Droplet deletion initiated! Refreshing in 3 seconds...');
+                
+                setTimeout(() => {
+                    loadDroplets();
+                }, 3000);
+
+            } catch (error) {
+                alert('Error deleting droplet: ' + error.message);
+            }
+        }
+
+        function viewDropletDetails(dropletId) {
+            const droplet = allDroplets.find(d => d.id === dropletId);
+            if (!droplet) return;
+
+            const details = JSON.stringify(droplet, null, 2);
+            const win = window.open('', 'Droplet Details', 'width=800,height=600');
+            win.document.write(`
+                <html>
+                <head>
+                    <title>Droplet ${droplet.name} - Details</title>
+                    <style>
+                        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+                        pre { white-space: pre-wrap; }
+                    </style>
+                </head>
+                <body>
+                    <h2>Droplet: ${droplet.name}</h2>
+                    <pre>${details}</pre>
+                </body>
+                </html>
+            `);
+        }
+
+        function sshToDroplet(ip) {
+            if (ip === 'N/A') {
+                alert('No public IP available for this droplet');
+                return;
+            }
+            
+            const sshCommand = `ssh root@${ip}`;
+            copyToClipboard(sshCommand);
+            alert(`SSH command copied to clipboard:\n\n${sshCommand}\n\nPaste it in your terminal to connect.`);
+        }
+
+        function powerAction(dropletId, currentStatus) {
+            const action = currentStatus === 'active' ? 'power_off' : 'power_on';
+            alert(`Power ${action.replace('_', ' ')} functionality would be implemented here for droplet ${dropletId}`);
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showSuccessMessage(`Copied: ${text}`);
+            });
+        }
+
+        function showSuccessMessage(message) {
+            const div = document.createElement('div');
+            div.className = 'success-message';
+            div.textContent = message;
+            div.style.position = 'fixed';
+            div.style.top = '20px';
+            div.style.right = '20px';
+            div.style.zIndex = '2000';
+            document.body.appendChild(div);
+
+            setTimeout(() => {
+                div.remove();
+            }, 3000);
+        }
+
+        // Close modal on escape
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                hideCreateModal();
+            }
+        });
+    </script>
+</body>
+</html>

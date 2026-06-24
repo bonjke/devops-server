@@ -1,0 +1,52 @@
+# Runtime dirs - не коммитить
+host_tasks/
+host_results/
+host_tasks_archive/
+logs/
+results/
+tasks/
+
+# Secrets
+data/credentials.json
+data/devops_key
+data/devops_key.pub
+data/*.json
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.idea/
+
+# Windows bat утилиты (не нужны на сервере)
+browse_archive.bat
+check_*.bat
+check_*.py
+dashboard.bat
+debug_*.bat
+debug_*.py
+diagnose*.bat
+diagnose*.py
+emergency_fix.bat
+final_fix.bat
+full_cleanup.bat
+generate_chain.bat
+get_ssh_keys.bat
+manage_droplets.bat
+process_task_manual.bat
+quick_*.bat
+read_logs.py
+rebuild.bat
+restart_*.bat
+retry_failed_tasks.bat
+run_tests.py
+show_full_logs.bat
+submit_chain.bat
+submit_task.bat
+test_*.bat
+test_*.py
+update_ui*.bat
+view_*.bat
