@@ -1,196 +1,130 @@
 const API_BASE = '/api';
 const API_KEY = 'devops-2match-secret-2026';
 
-// Обёртка с автоматическим X-API-Key
 function apiFetch(url, options = {}) {
-    options.headers = {
-        'X-API-Key': API_KEY,
-        'Content-Type': 'application/json',
-        ...options.headers
-    };
+    options.headers = { 'X-API-Key': API_KEY, 'Content-Type': 'application/json', ...options.headers };
     return fetch(url, options);
 }
 
-// Cache for DO data
-let doRegionsCache = null;
-let doSizesCache = null;
-let doImagesCache = null;
-let doSSHKeysCache = null;
-
-// ============= TAB NAVIGATION =============
+// ============= TABS =============
 
 document.querySelectorAll('.tab-button').forEach(button => {
     button.addEventListener('click', () => {
         const tabId = button.dataset.tab;
         document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
         button.classList.add('active');
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         if (tabId === 'servers') loadServers();
         if (tabId === 'services') loadServices();
         if (tabId === 'tasks') loadTasks();
+        if (tabId === 'vdsina') loadVDSina();
     });
 });
 
-// ============= TASK CREATOR =============
+// ============= ACTION TYPE CHANGE =============
 
 document.getElementById('action-type').addEventListener('change', (e) => {
-    const actionType = e.target.value;
-    document.querySelectorAll('.params-section').forEach(section => { section.style.display = 'none'; });
-    const paramsSection = document.getElementById(`params-${actionType}`);
-    if (paramsSection) paramsSection.style.display = 'block';
-    if (actionType === 'do_droplet_create') {
-        if (!doRegionsCache) loadDORegions();
-        if (!doSizesCache) loadDOSizes();
-        if (!doImagesCache) loadDOImages();
-        if (!doSSHKeysCache) loadDOSSHKeys();
-    }
+    document.querySelectorAll('.params-section').forEach(s => s.style.display = 'none');
+    const section = document.getElementById(`params-${e.target.value}`);
+    if (section) section.style.display = 'block';
 });
-
-// ============= DIGITAL OCEAN DATA LOADERS =============
-
-async function loadDORegions() {
-    const select = document.getElementById('do-create-region');
-    const loading = document.getElementById('region-loading');
-    try {
-        loading.style.display = 'inline';
-        const response = await apiFetch(`${API_BASE}/do/regions`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        doRegionsCache = data.regions;
-        select.innerHTML = doRegionsCache.map(r => `<option value="${r.slug}">${r.name} (${r.slug})</option>`).join('');
-    } catch(error) {
-        console.error('Error loading regions:', error);
-    } finally {
-        loading.style.display = 'none';
-    }
-}
-
-async function loadDOSizes() {
-    const select = document.getElementById('do-create-size');
-    const loading = document.getElementById('size-loading');
-    try {
-        loading.style.display = 'inline';
-        const response = await apiFetch(`${API_BASE}/do/sizes`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        doSizesCache = data.sizes;
-        select.innerHTML = doSizesCache.map(size => {
-            const memory = (size.memory / 1024).toFixed(0);
-            return `<option value="${size.slug}">${size.slug}: ${size.vcpus} vCPU, ${memory}GB RAM ($${size.price_monthly}/mo)</option>`;
-        }).join('');
-    } catch(error) {
-        console.error('Error loading sizes:', error);
-    } finally {
-        loading.style.display = 'none';
-    }
-}
-
-async function loadDOImages() {
-    const select = document.getElementById('do-create-image');
-    const loading = document.getElementById('image-loading');
-    try {
-        loading.style.display = 'inline';
-        const response = await apiFetch(`${API_BASE}/do/images?image_type=distribution`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        doImagesCache = data.images;
-        const grouped = {};
-        doImagesCache.forEach(image => {
-            const dist = image.distribution || 'Other';
-            if (!grouped[dist]) grouped[dist] = [];
-            grouped[dist].push(image);
-        });
-        let html = '';
-        Object.keys(grouped).sort().forEach(dist => {
-            html += `<optgroup label="${dist}">`;
-            grouped[dist].forEach(image => { html += `<option value="${image.slug}">${image.name}</option>`; });
-            html += `</optgroup>`;
-        });
-        select.innerHTML = html;
-    } catch(error) {
-        console.error('Error loading images:', error);
-    } finally {
-        loading.style.display = 'none';
-    }
-}
-
-async function loadDOSSHKeys() {
-    const select = document.getElementById('do-create-ssh-keys');
-    const loading = document.getElementById('ssh-keys-loading');
-    try {
-        loading.style.display = 'inline';
-        const response = await apiFetch(`${API_BASE}/do/ssh-keys`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        doSSHKeysCache = data.ssh_keys;
-        select.innerHTML = doSSHKeysCache.length === 0
-            ? '<option value="">No SSH keys found</option>'
-            : doSSHKeysCache.map(key => `<option value="${key.id}">${key.name} (${key.fingerprint.substring(0, 20)}...)</option>`).join('');
-    } catch(error) {
-        console.error('Error loading SSH keys:', error);
-    } finally {
-        loading.style.display = 'none';
-    }
-}
 
 // ============= TASK GENERATOR =============
 
 function generateTaskJSON() {
-    const actionType = document.getElementById('action-type').value;
-    const taskId = generateUUID();
+    const action = document.getElementById('action-type').value;
+    const taskId = `${action}-${Date.now()}`;
+    let task = { task_id: taskId, action, params: {} };
 
-    let task = {
-        task_id: taskId,
-        action: actionType,
-        params: {},
-        metadata: { created_by: "ui", created_at: new Date().toISOString() }
-    };
-
-    switch(actionType) {
+    switch(action) {
         case 'local_command':
-            task.params = {
-                command: document.getElementById('local-command').value,
-                cwd: document.getElementById('local-cwd').value || undefined,
-                timeout: parseInt(document.getElementById('local-timeout').value)
-            };
+            task.params = { command: document.getElementById('local-command').value, timeout: parseInt(document.getElementById('local-timeout').value) };
+            const cwd = document.getElementById('local-cwd').value;
+            if (cwd) task.params.cwd = cwd;
             break;
         case 'ssh_command':
             task.target = document.getElementById('ssh-server').value;
-            task.params = {
-                command: document.getElementById('ssh-command').value,
-                timeout: parseInt(document.getElementById('ssh-timeout').value)
-            };
+            task.params = { command: document.getElementById('ssh-command').value, timeout: parseInt(document.getElementById('ssh-timeout').value) };
             break;
         case 'chain':
-            try { task.chain = JSON.parse(document.getElementById('chain-tasks').value); }
-            catch(e) { alert('Invalid JSON for chain tasks'); return; }
+            try { task.chain = JSON.parse(document.getElementById('chain-tasks').value); } 
+            catch(e) { alert('Invalid JSON'); return; }
             break;
-        case 'do_droplet_list':
-            const tag = document.getElementById('do-list-tag').value;
-            if (tag) task.params.tag = tag;
+        case 'vdsina_get_balance':
+        case 'vdsina_list_servers':
+        case 'vdsina_list_ssh_keys':
+        case 'vdsina_list_templates':
+        case 'vdsina_list_datacenters':
+            task.params = {};
             break;
-        case 'do_droplet_create':
-            const name = document.getElementById('do-create-name').value;
-            if (!name) { alert('Droplet name is required!'); return; }
+        case 'vdsina_get_server':
+            task.params = { server_id: parseInt(document.getElementById('vdsina-server-id').value) };
+            break;
+        case 'vdsina_reboot_server':
+            task.params = { server_id: parseInt(document.getElementById('vdsina-reboot-id').value), type: document.getElementById('vdsina-reboot-type').value };
+            break;
+        case 'vdsina_delete_server':
+            task.params = { server_id: parseInt(document.getElementById('vdsina-delete-id').value) };
+            break;
+        case 'vdsina_create_backup':
+            task.params = { server_id: parseInt(document.getElementById('vdsina-backup-id').value) };
+            break;
+        case 'vdsina_list_plans':
+            task.params = { group_id: parseInt(document.getElementById('vdsina-group-id').value) };
+            break;
+        case 'vdsina_create_server':
             task.params = {
-                name: name,
-                region: document.getElementById('do-create-region').value,
-                size: document.getElementById('do-create-size').value,
-                image: document.getElementById('do-create-image').value
+                name: document.getElementById('vdsina-create-name').value,
+                datacenter: parseInt(document.getElementById('vdsina-create-dc').value),
+                server_plan: parseInt(document.getElementById('vdsina-create-plan').value),
+                template: parseInt(document.getElementById('vdsina-create-tpl').value),
+                ssh_key: parseInt(document.getElementById('vdsina-create-key').value),
             };
-            const tags = document.getElementById('do-create-tags').value;
-            if (tags) task.params.tags = tags.split(',').map(t => t.trim());
-            const sshKeySelect = document.getElementById('do-create-ssh-keys');
-            const selectedKeys = Array.from(sshKeySelect.selectedOptions).map(opt => opt.value).filter(val => val !== '');
-            if (selectedKeys.length > 0) task.params.ssh_keys = selectedKeys;
+            break;
+        case 'vdsina_create_ssh_key':
+            task.params = { name: document.getElementById('vdsina-key-name').value, public_key: document.getElementById('vdsina-key-data').value };
+            break;
+        case 'jira_create_issue':
+            task.params = { project_key: document.getElementById('jira-project').value, summary: document.getElementById('jira-summary').value, description: document.getElementById('jira-desc').value, issue_type: document.getElementById('jira-type').value };
+            break;
+        case 'jira_get_issue':
+            task.params = { issue_key: document.getElementById('jira-get-key').value };
+            break;
+        case 'jira_search':
+            task.params = { jql: document.getElementById('jira-jql').value, max_results: parseInt(document.getElementById('jira-max').value) };
+            break;
+        case 'jira_add_comment':
+            task.params = { issue_key: document.getElementById('jira-comment-key').value, comment: document.getElementById('jira-comment-text').value };
+            break;
+        case 'jira_transition_issue':
+            task.params = { issue_key: document.getElementById('jira-trans-key').value, transition: document.getElementById('jira-trans-name').value };
+            break;
+        case 'confluence_create_page':
+            task.params = { title: document.getElementById('conf-title').value, body: document.getElementById('conf-body').value, space_key: document.getElementById('conf-space').value };
+            break;
+        case 'confluence_get_page':
+            task.params = { title: document.getElementById('conf-get-title').value };
+            break;
+        case 'confluence_search':
+            task.params = { cql: document.getElementById('conf-cql').value };
+            break;
+        case 'server_install_software':
+            task.target = document.getElementById('install-server').value;
+            task.params = { software: document.getElementById('install-packages').value.split(',').map(s => s.trim()).filter(Boolean) };
+            break;
+        case 'server_run_script':
+            task.target = document.getElementById('script-server').value;
+            task.params = {};
+            const url = document.getElementById('script-url').value;
+            const content = document.getElementById('script-content').value;
+            if (url) task.params.script_url = url;
+            else if (content) task.params.script = content;
             break;
     }
 
-    const jsonContent = document.getElementById('json-content');
-    const jsonOutput = document.getElementById('json-output');
-    jsonContent.textContent = JSON.stringify(task, null, 2);
-    jsonOutput.style.display = 'block';
+    document.getElementById('json-content').textContent = JSON.stringify(task, null, 2);
+    document.getElementById('json-output').style.display = 'block';
     return task;
 }
 
@@ -198,231 +132,311 @@ async function submitTask() {
     const task = generateTaskJSON();
     if (!task) return;
     try {
-        const response = await apiFetch(`${API_BASE}/tasks`, {
-            method: 'POST',
-            body: JSON.stringify(task)
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const result = await response.json();
-        alert(`Task created: ${result.task_id}\n\nCheck Tasks tab for status.`);
-    } catch(error) {
-        alert(`Error creating task: ${error.message}`);
+        const resp = await apiFetch(`${API_BASE}/tasks`, { method: 'POST', body: JSON.stringify(task) });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const result = await resp.json();
+        alert(`✅ Task created: ${result.task_id}\n\nГо в Tasks History для результата.`);
+    } catch(e) {
+        alert(`❌ Error: ${e.message}`);
     }
 }
 
 function copyJSON() {
-    const jsonContent = document.getElementById('json-content').textContent;
-    navigator.clipboard.writeText(jsonContent).then(() => { alert('JSON copied to clipboard!'); });
+    navigator.clipboard.writeText(document.getElementById('json-content').textContent)
+        .then(() => alert('Copied!'));
 }
 
 function saveAsFile() {
-    const jsonContent = document.getElementById('json-content').textContent;
-    const task = JSON.parse(jsonContent);
-    const blob = new Blob([jsonContent], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `task_${task.task_id}.json`;
+    const text = document.getElementById('json-content').textContent;
+    const task = JSON.parse(text);
+    const blob = new Blob([text], { type: 'application/json' });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${task.task_id}.json` });
     a.click();
-    URL.revokeObjectURL(url);
+}
+
+// ============= TASKS HISTORY =============
+
+async function loadTasks() {
+    const container = document.getElementById('tasks-list');
+    const countEl = document.getElementById('tasks-count');
+    container.innerHTML = '<p style="color:#555;">Loading...</p>';
+
+    try {
+        const resp = await apiFetch(`${API_BASE}/tasks`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        let taskIds = await resp.json();
+
+        const statusFilter = document.getElementById('status-filter').value;
+
+        // Загружаем детали параллельно
+        const tasks = (await Promise.all(
+            taskIds.slice(0, 100).map(id =>
+                apiFetch(`${API_BASE}/tasks/${id}`).then(r => r.ok ? r.json() : null).catch(() => null)
+            )
+        )).filter(Boolean);
+
+        let filtered = statusFilter ? tasks.filter(t => t.status === statusFilter) : tasks;
+        filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        countEl.textContent = `${filtered.length} tasks`;
+
+        if (filtered.length === 0) {
+            container.innerHTML = '<div class="empty-state">No tasks found</div>';
+            return;
+        }
+
+        container.innerHTML = filtered.map(task => renderTaskCard(task)).join('');
+
+    } catch(e) {
+        container.innerHTML = `<p style="color:#f44336;">Error: ${e.message}</p>`;
+    }
+}
+
+function renderTaskCard(task) {
+    const statusClass = { completed: 'badge-success', failed: 'badge-danger', processing: 'badge-warning', pending: 'badge-info' }[task.status] || 'badge-info';
+    const statusIcon = { completed: '✅', failed: '❌', processing: '⏳', pending: '🕐' }[task.status] || '❓';
+    const ts = new Date(task.timestamp).toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    const execTime = task.execution_time ? `${task.execution_time.toFixed(2)}s` : '—';
+
+    // Восстанавливаем входящий JSON из результата
+    const inputJson = {
+        task_id: task.task_id,
+        action: task.action || '—',
+        ...(task.target ? { target: task.target } : {}),
+        ...(task.params ? { params: task.params } : {}),
+    };
+
+    return `
+    <div class="task-card">
+        <div class="task-header" onclick="toggleTask('${task.task_id}')">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span class="task-id">${task.task_id}</span>
+                <span class="action-badge">${task.action || '—'}</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span style="color:#555; font-size:12px;">${ts}</span>
+                <span style="color:#555; font-size:12px;">${execTime}</span>
+                <span class="badge ${statusClass}">${statusIcon} ${task.status}</span>
+                <span style="color:#555;">▼</span>
+            </div>
+        </div>
+        <div class="task-body" id="task-body-${task.task_id}">
+            <div class="task-meta">
+                <span>⏱ ${execTime}</span>
+                <span>🕐 ${ts}</span>
+                ${task.target ? `<span>🎯 ${task.target}</span>` : ''}
+            </div>
+
+            ${task.error ? `
+                <div class="json-label">❌ Error</div>
+                <div class="json-block" style="color:#f44336;">${escapeHtml(task.error)}</div>
+            ` : ''}
+
+            <div class="json-label">📥 Request JSON</div>
+            <pre class="json-block">${escapeHtml(JSON.stringify(inputJson, null, 2))}</pre>
+
+            <div class="json-label">📤 Response</div>
+            <pre class="json-block">${task.result ? escapeHtml(JSON.stringify(task.result, null, 2)) : '<span style="color:#555;">—</span>'}</pre>
+        </div>
+    </div>`;
+}
+
+function toggleTask(taskId) {
+    const body = document.getElementById(`task-body-${taskId}`);
+    body.classList.toggle('open');
+}
+
+function escapeHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ============= VDSINA TAB =============
+
+async function loadVDSina() {
+    const container = document.getElementById('vdsina-content');
+    container.innerHTML = '<p style="color:#555;">Loading VDSina data...</p>';
+
+    try {
+        // Запускаем параллельно
+        const [balanceResp, serversResp, keysResp] = await Promise.all([
+            submitAndPoll('vdsina-balance-ui', 'vdsina_get_balance', {}),
+            submitAndPoll('vdsina-servers-ui', 'vdsina_list_servers', {}),
+            submitAndPoll('vdsina-keys-ui', 'vdsina_list_ssh_keys', {}),
+        ]);
+
+        const balance = balanceResp?.balance || {};
+        const servers = serversResp?.servers || [];
+        const keys = keysResp?.ssh_keys || [];
+
+        container.innerHTML = `
+            <div class="vdsina-card">
+                <h4>💰 Balance</h4>
+                <div class="vdsina-grid">
+                    <div class="vdsina-stat"><div class="label">Real</div><div class="value">${balance.real || '—'} ₽</div></div>
+                    <div class="vdsina-stat"><div class="label">Bonus</div><div class="value">${balance.bonus || '0'} ₽</div></div>
+                    <div class="vdsina-stat"><div class="label">Partner</div><div class="value">${balance.partner || '0'} ₽</div></div>
+                </div>
+            </div>
+
+            <div class="vdsina-card">
+                <h4>🖥️ Servers (${servers.length})</h4>
+                ${servers.length === 0 ? '<p style="color:#555;">No servers</p>' : servers.map(s => `
+                    <div style="background:#16213e; padding:10px; border-radius:6px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <span style="color:#7eb8f7; font-weight:600;">${s.name || s.id}</span>
+                            <span style="color:#555; font-size:12px; margin-left:10px;">ID: ${s.id}</span>
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            ${s.ip ? `<span style="color:#ccc; font-size:13px;">${Array.isArray(s.ip) ? s.ip[0]?.ip || '—' : s.ip}</span>` : ''}
+                            <span class="badge ${s.status === 'active' ? 'badge-success' : 'badge-warning'}">${s.status || 'unknown'}</span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div class="vdsina-card">
+                <h4>🔑 SSH Keys (${keys.length})</h4>
+                ${keys.length === 0 ? '<p style="color:#555;">No SSH keys</p>' : keys.map(k => `
+                    <div style="background:#16213e; padding:8px 12px; border-radius:6px; margin-bottom:6px; display:flex; justify-content:space-between;">
+                        <span style="color:#ccc;">${k.name}</span>
+                        <span style="color:#555; font-size:12px;">ID: ${k.id}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } catch(e) {
+        container.innerHTML = `<p style="color:#f44336;">Error loading VDSina data: ${e.message}</p>`;
+    }
+}
+
+async function submitAndPoll(taskId, action, params) {
+    const task = { task_id: taskId, action, params };
+    await apiFetch(`${API_BASE}/tasks`, { method: 'POST', body: JSON.stringify(task) });
+    
+    for (let i = 0; i < 15; i++) {
+        await new Promise(r => setTimeout(r, 1000));
+        const r = await apiFetch(`${API_BASE}/tasks/${taskId}`);
+        if (r.ok) {
+            const data = await r.json();
+            if (data.status === 'completed') return data.result;
+            if (data.status === 'failed') throw new Error(data.error);
+        }
+    }
+    throw new Error('Timeout');
 }
 
 // ============= SERVERS =============
 
 async function loadServers() {
     try {
-        const response = await apiFetch(`${API_BASE}/servers`);
-        const servers = await response.json();
-        displayServers(servers);
-        updateServerDropdown(servers);
-    } catch(error) {
-        console.error('Error loading servers:', error);
-    }
+        const resp = await apiFetch(`${API_BASE}/servers`);
+        const servers = await resp.json();
+        renderServers(servers);
+        updateServerSelects(servers);
+    } catch(e) { console.error(e); }
 }
 
-function displayServers(servers) {
-    const container = document.getElementById('servers-list');
-    if (servers.length === 0) { container.innerHTML = '<p class="empty">No servers configured</p>'; return; }
-    container.innerHTML = servers.map(server => `
-        <div class="item-card">
-            <div class="item-header">
-                <h3>${server.name}</h3>
-                <span class="badge ${server.is_active ? 'badge-success' : 'badge-danger'}">${server.is_active ? 'Active' : 'Inactive'}</span>
+function renderServers(servers) {
+    const el = document.getElementById('servers-list');
+    if (!servers.length) { el.innerHTML = '<div class="empty-state">No servers</div>'; return; }
+    el.innerHTML = servers.map(s => `
+        <div class="vdsina-card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h4 style="margin:0 0 4px;">${s.name}</h4>
+                    <span style="color:#555; font-size:12px;">ID: ${s.id} | ${s.ip}:${s.ssh_port} | ${s.ssh_user}</span>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <span class="badge ${s.is_active ? 'badge-success' : 'badge-danger'}">${s.is_active ? 'Active' : 'Inactive'}</span>
+                    <button onclick="deleteServer('${s.id}')" class="btn btn-danger btn-sm">Delete</button>
+                </div>
             </div>
-            <div class="item-details">
-                <p><strong>ID:</strong> ${server.id}</p>
-                <p><strong>IP:</strong> ${server.ip}:${server.ssh_port}</p>
-                <p><strong>User:</strong> ${server.ssh_user}</p>
-                <p><strong>Tags:</strong> ${server.tags.join(', ') || 'none'}</p>
-            </div>
-            <div class="item-actions">
-                <button onclick="deleteServer('${server.id}')" class="btn btn-danger btn-sm">Delete</button>
-            </div>
+            ${s.tags?.length ? `<div style="margin-top:8px;">${s.tags.map(t => `<span style="background:#1e2a3a; color:#7eb8f7; padding:2px 8px; border-radius:4px; font-size:11px; margin-right:4px;">${t}</span>`).join('')}</div>` : ''}
         </div>
     `).join('');
 }
 
-function updateServerDropdown(servers) {
-    const dropdown = document.getElementById('ssh-server');
-    dropdown.innerHTML = servers.map(s => `<option value="${s.id}">${s.name} (${s.ip})</option>`).join('');
+function updateServerSelects(servers) {
+    const opts = servers.map(s => `<option value="${s.id}">${s.name} (${s.ip})</option>`).join('');
+    ['ssh-server', 'install-server', 'script-server'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = opts;
+    });
 }
 
 function showAddServerForm() {
-    const serverId = prompt('Server ID:');
-    if (!serverId) return;
-    const name = prompt('Server Name:');
-    const ip = prompt('IP Address:');
-    const sshKeyName = prompt('SSH Key Name:');
-    if (!name || !ip || !sshKeyName) { alert('All fields are required'); return; }
-    addServer({ id: serverId, name, ip, ssh_port: 22, ssh_user: 'root', ssh_key_name: sshKeyName, tags: [], services: [], is_active: true });
+    const id = prompt('Server ID (e.g. vds-main):'); if (!id) return;
+    const name = prompt('Name:'); if (!name) return;
+    const ip = prompt('IP:'); if (!ip) return;
+    const key = prompt('SSH Key Name (from credentials.json):'); if (!key) return;
+    addServer({ id, name, ip, ssh_port: 22, ssh_user: 'root', ssh_key_name: key, tags: [], services: [], is_active: true });
 }
 
 async function addServer(server) {
     try {
-        const response = await apiFetch(`${API_BASE}/servers`, { method: 'POST', body: JSON.stringify(server) });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        alert('Server added successfully');
-        loadServers();
-    } catch(error) {
-        alert(`Error adding server: ${error.message}`);
-    }
+        const r = await apiFetch(`${API_BASE}/servers`, { method: 'POST', body: JSON.stringify(server) });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        alert('Server added'); loadServers();
+    } catch(e) { alert(`Error: ${e.message}`); }
 }
 
-async function deleteServer(serverId) {
-    if (!confirm(`Delete server ${serverId}?`)) return;
+async function deleteServer(id) {
+    if (!confirm(`Delete ${id}?`)) return;
     try {
-        const response = await apiFetch(`${API_BASE}/servers/${serverId}`, { method: 'DELETE' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        alert('Server deleted');
+        await apiFetch(`${API_BASE}/servers/${id}`, { method: 'DELETE' });
         loadServers();
-    } catch(error) {
-        alert(`Error deleting server: ${error.message}`);
-    }
+    } catch(e) { alert(`Error: ${e.message}`); }
 }
 
 // ============= SERVICES =============
 
 async function loadServices() {
     try {
-        const response = await apiFetch(`${API_BASE}/services`);
-        const services = await response.json();
-        displayServices(services);
-    } catch(error) {
-        console.error('Error loading services:', error);
-    }
-}
-
-function displayServices(services) {
-    const container = document.getElementById('services-list');
-    if (services.length === 0) { container.innerHTML = '<p class="empty">No services configured</p>'; return; }
-    container.innerHTML = services.map(service => `
-        <div class="item-card">
-            <div class="item-header">
-                <h3>${service.name}</h3>
-                <span class="badge ${service.is_active ? 'badge-success' : 'badge-danger'}">${service.is_active ? 'Active' : 'Inactive'}</span>
+        const resp = await apiFetch(`${API_BASE}/services`);
+        const services = await resp.json();
+        const el = document.getElementById('services-list');
+        if (!services.length) { el.innerHTML = '<div class="empty-state">No services</div>'; return; }
+        el.innerHTML = services.map(s => `
+            <div class="vdsina-card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div><h4 style="margin:0 0 4px;">${s.name}</h4><span style="color:#555; font-size:12px;">${s.stack} | ${s.deploy_path}</span></div>
+                    <div style="display:flex; gap:8px;">
+                        <span class="badge ${s.is_active ? 'badge-success' : 'badge-danger'}">${s.is_active ? 'Active' : 'Inactive'}</span>
+                        <button onclick="deleteService('${s.id}')" class="btn btn-danger btn-sm">Delete</button>
+                    </div>
+                </div>
             </div>
-            <div class="item-details">
-                <p><strong>ID:</strong> ${service.id}</p>
-                <p><strong>Stack:</strong> ${service.stack}</p>
-                <p><strong>Port:</strong> ${service.port || 'N/A'}</p>
-                <p><strong>Deploy Path:</strong> ${service.deploy_path}</p>
-            </div>
-            <div class="item-actions">
-                <button onclick="deleteService('${service.id}')" class="btn btn-danger btn-sm">Delete</button>
-            </div>
-        </div>
-    `).join('');
+        `).join('');
+    } catch(e) { console.error(e); }
 }
 
 function showAddServiceForm() {
-    const serviceId = prompt('Service ID:');
-    if (!serviceId) return;
-    const name = prompt('Service Name:');
-    const stack = prompt('Stack (e.g., node:18-alpine):');
-    const deployPath = prompt('Deploy Path:');
-    const startCommand = prompt('Start Command:');
-    if (!name || !stack || !deployPath || !startCommand) { alert('All fields are required'); return; }
-    addService({ id: serviceId, name, stack, deploy_path: deployPath, start_command: startCommand, is_active: true });
+    const id = prompt('Service ID:'); if (!id) return;
+    const name = prompt('Name:'); if (!name) return;
+    const stack = prompt('Stack (e.g. node:18-alpine):'); if (!stack) return;
+    const path = prompt('Deploy Path:'); if (!path) return;
+    const cmd = prompt('Start Command:'); if (!cmd) return;
+    addService({ id, name, stack, deploy_path: path, start_command: cmd, is_active: true });
 }
 
 async function addService(service) {
     try {
-        const response = await apiFetch(`${API_BASE}/services`, { method: 'POST', body: JSON.stringify(service) });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        alert('Service added successfully');
-        loadServices();
-    } catch(error) {
-        alert(`Error adding service: ${error.message}`);
-    }
+        const r = await apiFetch(`${API_BASE}/services`, { method: 'POST', body: JSON.stringify(service) });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        alert('Service added'); loadServices();
+    } catch(e) { alert(`Error: ${e.message}`); }
 }
 
-async function deleteService(serviceId) {
-    if (!confirm(`Delete service ${serviceId}?`)) return;
+async function deleteService(id) {
+    if (!confirm(`Delete ${id}?`)) return;
     try {
-        const response = await apiFetch(`${API_BASE}/services/${serviceId}`, { method: 'DELETE' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        alert('Service deleted');
+        await apiFetch(`${API_BASE}/services/${id}`, { method: 'DELETE' });
         loadServices();
-    } catch(error) {
-        alert(`Error deleting service: ${error.message}`);
-    }
+    } catch(e) { alert(`Error: ${e.message}`); }
 }
 
-// ============= TASKS =============
-
-async function loadTasks() {
-    try {
-        const response = await apiFetch(`${API_BASE}/tasks`);
-        const taskIds = await response.json();
-        const tasks = await Promise.all(
-            taskIds.slice(0, 50).map(async taskId => {
-                try {
-                    const res = await apiFetch(`${API_BASE}/tasks/${taskId}`);
-                    return res.json();
-                } catch(e) { return null; }
-            })
-        );
-        let validTasks = tasks.filter(t => t !== null);
-        const statusFilter = document.getElementById('status-filter').value;
-        if (statusFilter) validTasks = validTasks.filter(t => t.status === statusFilter);
-        validTasks.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        displayTasks(validTasks);
-    } catch(error) {
-        console.error('Error loading tasks:', error);
-    }
-}
-
-function displayTasks(tasks) {
-    const container = document.getElementById('tasks-list');
-    if (tasks.length === 0) { container.innerHTML = '<p class="empty">No tasks found</p>'; return; }
-    container.innerHTML = tasks.map(task => {
-        const statusClass = task.status === 'completed' ? 'badge-success' : task.status === 'failed' ? 'badge-danger' : 'badge-warning';
-        const localTimestamp = new Date(task.timestamp).toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-        return `
-            <div class="item-card">
-                <div class="item-header">
-                    <h3>${task.task_id}</h3>
-                    <span class="badge ${statusClass}">${task.status}</span>
-                </div>
-                <div class="item-details">
-                    <p><strong>Execution Time:</strong> ${task.execution_time ? task.execution_time.toFixed(2) + 's' : 'N/A'}</p>
-                    <p><strong>Timestamp:</strong> ${localTimestamp}</p>
-                    ${task.error ? `<p class="error"><strong>Error:</strong> ${task.error}</p>` : ''}
-                    ${task.result ? `<details><summary>Result</summary><pre>${JSON.stringify(task.result, null, 2)}</pre></details>` : ''}
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-// ============= UTILITIES =============
-
-function generateUUID() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-}
-
-document.addEventListener('DOMContentLoaded', () => { loadServers(); });
+// ============= INIT =============
+document.addEventListener('DOMContentLoaded', () => {
+    loadServers();
+    loadTasks();
+});

@@ -5,45 +5,103 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DevOps Center</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        .task-card { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+        .task-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; cursor: pointer; background: #16213e; }
+        .task-header:hover { background: #1a2a4a; }
+        .task-body { padding: 16px; display: none; border-top: 1px solid #2a2a4a; }
+        .task-body.open { display: block; }
+        .task-meta { display: flex; gap: 20px; margin-bottom: 12px; font-size: 13px; color: #888; }
+        .json-block { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px; overflow-x: auto; font-family: monospace; font-size: 12px; line-height: 1.5; color: #e6edf3; max-height: 400px; overflow-y: auto; }
+        .json-label { font-size: 12px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin: 10px 0 4px; }
+        .badge { padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .badge-success { background: #1a4a1a; color: #4caf50; }
+        .badge-danger { background: #4a1a1a; color: #f44336; }
+        .badge-warning { background: #4a3a1a; color: #ff9800; }
+        .badge-info { background: #1a2a4a; color: #2196f3; }
+        .task-id { font-family: monospace; font-size: 13px; color: #ccc; }
+        .action-badge { background: #1e2a3a; color: #7eb8f7; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-family: monospace; }
+        .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid #2a2a4a; padding-bottom: 0; }
+        .tab-button { padding: 10px 20px; background: none; border: none; color: #888; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+        .tab-button.active { color: #7eb8f7; border-bottom-color: #7eb8f7; }
+        .tab-button:hover { color: #ccc; }
+        .refresh-btn { background: #1e2a3a; border: 1px solid #2a2a4a; color: #7eb8f7; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+        .refresh-btn:hover { background: #2a3a4a; }
+        .tasks-controls { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; }
+        .tasks-controls select { background: #1a1a2e; border: 1px solid #2a2a4a; color: #ccc; padding: 6px 10px; border-radius: 6px; }
+        .empty-state { text-align: center; padding: 40px; color: #555; }
+        .vdsina-card { background: #1a1a2e; border: 1px solid #2a2a4a; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+        .vdsina-card h4 { margin: 0 0 8px; color: #7eb8f7; }
+        .vdsina-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+        .vdsina-stat { background: #16213e; padding: 10px; border-radius: 6px; }
+        .vdsina-stat .label { font-size: 11px; color: #666; margin-bottom: 4px; }
+        .vdsina-stat .value { font-size: 14px; color: #ccc; font-weight: 600; }
+        .header-links { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+        .header-link { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; text-decoration: none; color: white; }
+    </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>🚀 DevOps Center</h1>
-            <p class="subtitle">Infrastructure Management Console</p>
-            <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <a href="droplets.html" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #0080ff 0%, #0066cc 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,128,255,0.3); transition: all 0.3s;">
-                    ☁️ Manage Droplets
-                </a>
-                <a href="jira.html" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #0052cc 0%, #0043a8 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,82,204,0.3); transition: all 0.3s;">
-                    🎫 Jira Management
-                </a>
-                <a href="https://cloud.digitalocean.com" target="_blank" style="display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; box-shadow: 0 4px 12px rgba(102,126,234,0.3); transition: all 0.3s;">
-                    🌐 DO Console
-                </a>
+            <p class="subtitle">Infrastructure Management Console &nbsp;|&nbsp; <span style="color:#7eb8f7">87.199.198.120</span></p>
+            <div class="header-links">
+                <a href="jira.html" class="header-link" style="background:#0052cc;">🎫 Jira</a>
+                <a href="https://www.vdsina.com" target="_blank" class="header-link" style="background:#1a3a5a;">☁️ VDSina Panel</a>
+                <a href="https://2-match.atlassian.net" target="_blank" class="header-link" style="background:#333;">🌐 Atlassian</a>
             </div>
         </header>
 
         <div class="tabs">
-            <button class="tab-button active" data-tab="task-creator">Task Creator</button>
-            <button class="tab-button" data-tab="servers">Servers</button>
-            <button class="tab-button" data-tab="services">Services</button>
-            <button class="tab-button" data-tab="tasks">Tasks</button>
+            <button class="tab-button active" data-tab="task-creator">➕ Create Task</button>
+            <button class="tab-button" data-tab="tasks">📋 Tasks History</button>
+            <button class="tab-button" data-tab="vdsina">☁️ VDSina</button>
+            <button class="tab-button" data-tab="servers">🖥️ Servers</button>
+            <button class="tab-button" data-tab="services">⚙️ Services</button>
         </div>
 
-        <!-- Task Creator Tab -->
+        <!-- ===== TASK CREATOR ===== -->
         <div id="task-creator" class="tab-content active">
             <h2>Create Task</h2>
-            
+
             <div class="form-group">
                 <label>Action Type:</label>
                 <select id="action-type">
-                    <option value="local_command">Local Command</option>
-                    <option value="ssh_command">SSH Command</option>
-                    <option value="chain">Chain Tasks</option>
-                    <option value="do_droplet_list">DO: List Droplets</option>
-                    <option value="do_droplet_create">DO: Create Droplet</option>
-                    <option value="jira_update">Jira Update</option>
+                    <optgroup label="Commands">
+                        <option value="local_command">Local Command (on VDS)</option>
+                        <option value="ssh_command">SSH Command (on server)</option>
+                        <option value="chain">Chain (sequential tasks)</option>
+                    </optgroup>
+                    <optgroup label="VDSina">
+                        <option value="vdsina_get_balance">VDSina: Balance</option>
+                        <option value="vdsina_list_servers">VDSina: List Servers</option>
+                        <option value="vdsina_get_server">VDSina: Get Server</option>
+                        <option value="vdsina_create_server">VDSina: Create Server</option>
+                        <option value="vdsina_reboot_server">VDSina: Reboot Server</option>
+                        <option value="vdsina_delete_server">VDSina: Delete Server</option>
+                        <option value="vdsina_list_ssh_keys">VDSina: List SSH Keys</option>
+                        <option value="vdsina_create_ssh_key">VDSina: Add SSH Key</option>
+                        <option value="vdsina_list_templates">VDSina: OS Templates</option>
+                        <option value="vdsina_list_datacenters">VDSina: Datacenters</option>
+                        <option value="vdsina_list_plans">VDSina: Plans</option>
+                        <option value="vdsina_create_backup">VDSina: Create Backup</option>
+                    </optgroup>
+                    <optgroup label="Jira">
+                        <option value="jira_create_issue">Jira: Create Issue</option>
+                        <option value="jira_get_issue">Jira: Get Issue</option>
+                        <option value="jira_search">Jira: Search</option>
+                        <option value="jira_add_comment">Jira: Add Comment</option>
+                        <option value="jira_transition_issue">Jira: Transition</option>
+                    </optgroup>
+                    <optgroup label="Confluence">
+                        <option value="confluence_create_page">Confluence: Create Page</option>
+                        <option value="confluence_get_page">Confluence: Get Page</option>
+                        <option value="confluence_search">Confluence: Search</option>
+                    </optgroup>
+                    <optgroup label="Server Management">
+                        <option value="server_install_software">Server: Install Software</option>
+                        <option value="server_run_script">Server: Run Script</option>
+                    </optgroup>
                 </select>
             </div>
 
@@ -55,7 +113,7 @@
                 </div>
                 <div class="form-group">
                     <label>Working Directory (optional):</label>
-                    <input type="text" id="local-cwd" placeholder="/path/to/dir" />
+                    <input type="text" id="local-cwd" placeholder="/opt/projects" />
                 </div>
                 <div class="form-group">
                     <label>Timeout (seconds):</label>
@@ -66,7 +124,7 @@
             <!-- SSH Command -->
             <div id="params-ssh_command" class="params-section" style="display:none;">
                 <div class="form-group">
-                    <label>Server ID:</label>
+                    <label>Server:</label>
                     <select id="ssh-server"></select>
                 </div>
                 <div class="form-group">
@@ -79,141 +137,172 @@
                 </div>
             </div>
 
-            <!-- Chain Tasks -->
+            <!-- Chain -->
             <div id="params-chain" class="params-section" style="display:none;">
-                <p class="info">Chain tasks will be executed sequentially. Use JSON format.</p>
+                <p class="info">Задачи выполняются последовательно. JSON массив шагов.</p>
                 <div class="form-group">
                     <label>Tasks JSON Array:</label>
-                    <textarea id="chain-tasks" rows="10" placeholder='[{"action":"local_command","params":{"command":"echo test"}}]'></textarea>
+                    <textarea id="chain-tasks" rows="10" placeholder='[{"action":"ssh_command","target":"vdsina-875675","params":{"command":"uptime"}}]'></textarea>
                 </div>
             </div>
 
-            <!-- DO Droplet List -->
-            <div id="params-do_droplet_list" class="params-section" style="display:none;">
-                <p class="info">List all Digital Ocean droplets</p>
-                <div class="form-group">
-                    <label>Filter by Tag (optional):</label>
-                    <input type="text" id="do-list-tag" placeholder="production" />
+            <!-- VDSina server_id -->
+            <div id="params-vdsina_get_server" class="params-section" style="display:none;">
+                <div class="form-group"><label>Server ID:</label><input type="number" id="vdsina-server-id" placeholder="875675" /></div>
+            </div>
+            <div id="params-vdsina_reboot_server" class="params-section" style="display:none;">
+                <div class="form-group"><label>Server ID:</label><input type="number" id="vdsina-reboot-id" placeholder="875675" /></div>
+                <div class="form-group"><label>Type:</label><select id="vdsina-reboot-type"><option value="soft">Soft</option><option value="hard">Hard</option></select></div>
+            </div>
+            <div id="params-vdsina_delete_server" class="params-section" style="display:none;">
+                <div class="form-group"><label>Server ID:</label><input type="number" id="vdsina-delete-id" placeholder="875675" /></div>
+            </div>
+            <div id="params-vdsina_create_backup" class="params-section" style="display:none;">
+                <div class="form-group"><label>Server ID:</label><input type="number" id="vdsina-backup-id" placeholder="875675" /></div>
+            </div>
+            <div id="params-vdsina_list_plans" class="params-section" style="display:none;">
+                <div class="form-group"><label>Group ID:</label><input type="number" id="vdsina-group-id" value="2" /></div>
+            </div>
+
+            <!-- VDSina Create Server -->
+            <div id="params-vdsina_create_server" class="params-section" style="display:none;">
+                <div class="form-group"><label>Name:</label><input type="text" id="vdsina-create-name" placeholder="my-server" /></div>
+                <div class="form-group"><label>Datacenter ID:</label><input type="number" id="vdsina-create-dc" value="4" /><small style="color:#666"> 4=Amsterdam1, 1=Amsterdam2, 3=Amsterdam3</small></div>
+                <div class="form-group"><label>Server Plan ID:</label><input type="number" id="vdsina-create-plan" value="36" /><small style="color:#666"> 36=1CPU/1GB/10GB</small></div>
+                <div class="form-group"><label>Template ID:</label><input type="number" id="vdsina-create-tpl" value="38" /><small style="color:#666"> 38=CentOS 10</small></div>
+                <div class="form-group"><label>SSH Key ID:</label><input type="number" id="vdsina-create-key" value="22248" /></div>
+            </div>
+
+            <!-- VDSina SSH Key -->
+            <div id="params-vdsina_create_ssh_key" class="params-section" style="display:none;">
+                <div class="form-group"><label>Name:</label><input type="text" id="vdsina-key-name" placeholder="my-key" /></div>
+                <div class="form-group"><label>Public Key:</label><textarea id="vdsina-key-data" rows="3" placeholder="ssh-ed25519 AAAA..."></textarea></div>
+            </div>
+
+            <!-- Jira Create -->
+            <div id="params-jira_create_issue" class="params-section" style="display:none;">
+                <div class="form-group"><label>Project Key:</label><input type="text" id="jira-project" value="SCRUM" /></div>
+                <div class="form-group"><label>Summary:</label><input type="text" id="jira-summary" placeholder="Issue title" /></div>
+                <div class="form-group"><label>Description:</label><textarea id="jira-desc" rows="3"></textarea></div>
+                <div class="form-group"><label>Type:</label>
+                    <select id="jira-type"><option>Task</option><option>Bug</option><option>Story</option><option>Epic</option></select>
                 </div>
             </div>
 
-            <!-- DO Droplet Create -->
-            <div id="params-do_droplet_create" class="params-section" style="display:none;">
-                <div class="form-group">
-                    <label>Droplet Name: <span style="color:red;">*</span></label>
-                    <input type="text" id="do-create-name" placeholder="web-server-01" required />
-                </div>
-                
-                <div class="form-group">
-                    <label>Region: 
-                        <button type="button" onclick="loadDORegions()" class="btn btn-sm" style="margin-left: 10px;">🔄 Load Regions</button>
-                    </label>
-                    <select id="do-create-region">
-                        <option value="nyc3">NYC3 - New York</option>
-                        <option value="sfo3">SFO3 - San Francisco</option>
-                        <option value="ams3">AMS3 - Amsterdam</option>
-                        <option value="sgp1">SGP1 - Singapore</option>
-                        <option value="lon1">LON1 - London</option>
-                        <option value="fra1">FRA1 - Frankfurt</option>
-                        <option value="tor1">TOR1 - Toronto</option>
-                        <option value="blr1">BLR1 - Bangalore</option>
-                    </select>
-                    <span id="region-loading" style="display:none; color: #666;">Loading...</span>
-                </div>
-                
-                <div class="form-group">
-                    <label>Size:
-                        <button type="button" onclick="loadDOSizes()" class="btn btn-sm" style="margin-left: 10px;">🔄 Load Sizes</button>
-                    </label>
-                    <select id="do-create-size">
-                        <option value="s-1vcpu-1gb">Basic: 1 vCPU, 1GB RAM ($6/mo)</option>
-                        <option value="s-1vcpu-2gb">Basic: 1 vCPU, 2GB RAM ($12/mo)</option>
-                        <option value="s-2vcpu-2gb">Basic: 2 vCPU, 2GB RAM ($18/mo)</option>
-                        <option value="s-2vcpu-4gb">Basic: 2 vCPU, 4GB RAM ($24/mo)</option>
-                        <option value="s-4vcpu-8gb">Basic: 4 vCPU, 8GB RAM ($48/mo)</option>
-                    </select>
-                    <span id="size-loading" style="display:none; color: #666;">Loading...</span>
-                </div>
-                
-                <div class="form-group">
-                    <label>Image:
-                        <button type="button" onclick="loadDOImages()" class="btn btn-sm" style="margin-left: 10px;">🔄 Load Images</button>
-                    </label>
-                    <select id="do-create-image">
-                        <option value="ubuntu-22-04-x64">Ubuntu 22.04 LTS x64</option>
-                        <option value="ubuntu-20-04-x64">Ubuntu 20.04 LTS x64</option>
-                        <option value="debian-11-x64">Debian 11 x64</option>
-                        <option value="centos-stream-9-x64">CentOS Stream 9 x64</option>
-                        <option value="fedora-39-x64">Fedora 39 x64</option>
-                        <option value="rocky-9-x64">Rocky Linux 9 x64</option>
-                    </select>
-                    <span id="image-loading" style="display:none; color: #666;">Loading...</span>
-                </div>
-                
-                <div class="form-group">
-                    <label>Tags (comma-separated):</label>
-                    <input type="text" id="do-create-tags" placeholder="production,web" />
-                </div>
-                
-                <div class="form-group">
-                    <label>SSH Keys:
-                        <button type="button" onclick="loadDOSSHKeys()" class="btn btn-sm" style="margin-left: 10px;">🔄 Load SSH Keys</button>
-                    </label>
-                    <select id="do-create-ssh-keys" multiple size="3">
-                        <option value="">No SSH keys (will use password)</option>
-                    </select>
-                    <small style="color: #666;">Hold Ctrl/Cmd to select multiple</small>
-                    <span id="ssh-keys-loading" style="display:none; color: #666;">Loading...</span>
+            <!-- Jira Get -->
+            <div id="params-jira_get_issue" class="params-section" style="display:none;">
+                <div class="form-group"><label>Issue Key:</label><input type="text" id="jira-get-key" placeholder="SCRUM-1" /></div>
+            </div>
+
+            <!-- Jira Search -->
+            <div id="params-jira_search" class="params-section" style="display:none;">
+                <div class="form-group"><label>JQL:</label><input type="text" id="jira-jql" placeholder='project=SCRUM AND status="To Do"' /></div>
+                <div class="form-group"><label>Max Results:</label><input type="number" id="jira-max" value="20" /></div>
+            </div>
+
+            <!-- Jira Comment -->
+            <div id="params-jira_add_comment" class="params-section" style="display:none;">
+                <div class="form-group"><label>Issue Key:</label><input type="text" id="jira-comment-key" placeholder="SCRUM-1" /></div>
+                <div class="form-group"><label>Comment:</label><textarea id="jira-comment-text" rows="3"></textarea></div>
+            </div>
+
+            <!-- Jira Transition -->
+            <div id="params-jira_transition_issue" class="params-section" style="display:none;">
+                <div class="form-group"><label>Issue Key:</label><input type="text" id="jira-trans-key" placeholder="SCRUM-1" /></div>
+                <div class="form-group"><label>Transition:</label>
+                    <select id="jira-trans-name"><option>In Progress</option><option>Done</option><option>To Do</option><option>In Review</option></select>
                 </div>
             </div>
 
-            <div class="actions">
-                <button onclick="generateTaskJSON()" class="btn btn-primary">Generate JSON</button>
-                <button onclick="submitTask()" class="btn btn-success">Create & Execute</button>
+            <!-- Confluence Create -->
+            <div id="params-confluence_create_page" class="params-section" style="display:none;">
+                <div class="form-group"><label>Title:</label><input type="text" id="conf-title" placeholder="Page title" /></div>
+                <div class="form-group"><label>Body (HTML):</label><textarea id="conf-body" rows="5" placeholder="<p>Content</p>"></textarea></div>
+                <div class="form-group"><label>Space Key:</label><input type="text" id="conf-space" value="2M" /></div>
             </div>
 
-            <div id="json-output" class="json-output" style="display:none;">
+            <!-- Confluence Get -->
+            <div id="params-confluence_get_page" class="params-section" style="display:none;">
+                <div class="form-group"><label>Page Title:</label><input type="text" id="conf-get-title" placeholder="Page title" /></div>
+            </div>
+
+            <!-- Confluence Search -->
+            <div id="params-confluence_search" class="params-section" style="display:none;">
+                <div class="form-group"><label>CQL Query:</label><input type="text" id="conf-cql" placeholder='space="2M" AND title~"deploy"' /></div>
+            </div>
+
+            <!-- Server Install -->
+            <div id="params-server_install_software" class="params-section" style="display:none;">
+                <div class="form-group"><label>Server:</label><select id="install-server"></select></div>
+                <div class="form-group"><label>Packages (comma-separated):</label><input type="text" id="install-packages" placeholder="nginx, git, curl" /></div>
+            </div>
+
+            <!-- Server Script -->
+            <div id="params-server_run_script" class="params-section" style="display:none;">
+                <div class="form-group"><label>Server:</label><select id="script-server"></select></div>
+                <div class="form-group"><label>Script URL (or paste below):</label><input type="text" id="script-url" placeholder="https://..." /></div>
+                <div class="form-group"><label>Script content:</label><textarea id="script-content" rows="6" placeholder="#!/bin/bash&#10;echo hello"></textarea></div>
+            </div>
+
+            <div class="actions" style="margin-top:20px; display:flex; gap:10px;">
+                <button onclick="generateTaskJSON()" class="btn btn-primary">⚙️ Generate JSON</button>
+                <button onclick="submitTask()" class="btn btn-success">▶️ Create & Execute</button>
+            </div>
+
+            <div id="json-output" class="json-output" style="display:none; margin-top:16px;">
                 <h3>Generated JSON:</h3>
-                <pre id="json-content"></pre>
-                <button onclick="copyJSON()" class="btn btn-secondary">Copy to Clipboard</button>
-                <button onclick="saveAsFile()" class="btn btn-secondary">Save as File</button>
+                <pre id="json-content" class="json-block"></pre>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    <button onclick="copyJSON()" class="btn btn-secondary">📋 Copy</button>
+                    <button onclick="saveAsFile()" class="btn btn-secondary">💾 Save as File</button>
+                </div>
             </div>
         </div>
 
-        <!-- Servers Tab -->
+        <!-- ===== TASKS HISTORY ===== -->
+        <div id="tasks" class="tab-content">
+            <div class="tasks-controls">
+                <select id="status-filter" onchange="loadTasks()">
+                    <option value="">All Statuses</option>
+                    <option value="completed">✅ Completed</option>
+                    <option value="failed">❌ Failed</option>
+                    <option value="processing">⏳ Processing</option>
+                </select>
+                <button onclick="loadTasks()" class="refresh-btn">🔄 Refresh</button>
+                <span id="tasks-count" style="color:#666; font-size:13px;"></span>
+            </div>
+            <div id="tasks-list"></div>
+        </div>
+
+        <!-- ===== VDSINA ===== -->
+        <div id="vdsina" class="tab-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h2 style="margin:0;">☁️ VDSina</h2>
+                <button onclick="loadVDSina()" class="refresh-btn">🔄 Refresh</button>
+            </div>
+            <div id="vdsina-content">
+                <p style="color:#555;">Click Refresh to load VDSina data</p>
+            </div>
+        </div>
+
+        <!-- ===== SERVERS ===== -->
         <div id="servers" class="tab-content">
-            <div class="header-actions">
-                <h2>Servers</h2>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h2 style="margin:0;">🖥️ Servers</h2>
                 <button onclick="showAddServerForm()" class="btn btn-primary">+ Add Server</button>
             </div>
             <div id="servers-list" class="items-list"></div>
         </div>
 
-        <!-- Services Tab -->
+        <!-- ===== SERVICES ===== -->
         <div id="services" class="tab-content">
-            <div class="header-actions">
-                <h2>Services</h2>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h2 style="margin:0;">⚙️ Services</h2>
                 <button onclick="showAddServiceForm()" class="btn btn-primary">+ Add Service</button>
             </div>
             <div id="services-list" class="items-list"></div>
         </div>
 
-        <!-- Tasks Tab -->
-        <div id="tasks" class="tab-content">
-            <div class="header-actions">
-                <h2>Tasks History</h2>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <select id="status-filter" onchange="loadTasks()">
-                        <option value="">All Statuses</option>
-                        <option value="completed">Completed</option>
-                        <option value="failed">Failed</option>
-                        <option value="processing">Processing</option>
-                    </select>
-                    <button onclick="loadTasks()" class="btn btn-secondary">🔄 Refresh</button>
-                </div>
-            </div>
-            <div id="tasks-list" class="items-list"></div>
-        </div>
     </div>
 
     <script src="app.js"></script>
