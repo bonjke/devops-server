@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   devops-center:
     build: .
@@ -12,7 +10,7 @@ services:
       - ./results:/app/results
       - ./logs:/app/logs
       - ./src:/app/src
-      # Docker socket
+      - ./ui:/app/ui
       - /var/run/docker.sock:/var/run/docker.sock
     env_file:
       - .env
@@ -21,7 +19,7 @@ services:
       - devops-net
     environment:
       - DOCKER_HOST=unix:///var/run/docker.sock
-    # Logging configuration for automated log reading
+      - API_KEY=devops-2match-secret-2026
     logging:
       driver: "json-file"
       options:
