@@ -1,26 +1,24 @@
 #!/bin/bash
 # DevOps Center MCP Server Setup Script
-# Запуск: bash /opt/projects/devops-center/setup_mcp.sh
 
 set -e
-
 echo "=== DevOps Center MCP Server Setup ==="
 
-# 1. Git pull
 cd /opt/projects/devops-center
-git pull
-echo "✓ Code updated"
 
-# 2. Install Python deps
-pip3 install 'mcp[cli]' requests --break-system-packages -q
+# 1. Install Python deps (CentOS 10 compatible)
+PIP=$(which pip3 2>/dev/null || which pip 2>/dev/null || echo "python3 -m pip")
+echo "Using pip: $PIP"
+$PIP install 'mcp[cli]' requests --break-system-packages -q 2>/dev/null || \
+    python3 -m pip install 'mcp[cli]' requests -q
 echo "✓ Dependencies installed"
 
-# 3. Open port
+# 2. Open port
 iptables -I INPUT -p tcp --dport 8001 -j ACCEPT 2>/dev/null || true
 echo "✓ Port 8001 opened"
 
-# 4. Create systemd service
-cat > /etc/systemd/system/devops-mcp.service << 'EOF'
+# 3. Create systemd service
+cat > /etc/systemd/system/devops-mcp.service << 'SVCEOF'
 [Unit]
 Description=DevOps Center MCP Server
 After=network.target
@@ -41,20 +39,17 @@ StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
-EOF
+SVCEOF
 echo "✓ Service file created"
 
-# 5. Enable and start
+# 4. Enable and start
 systemctl daemon-reload
 systemctl enable devops-mcp
 systemctl restart devops-mcp
 sleep 4
 
-# 6. Check status
+# 5. Status
 systemctl status devops-mcp --no-pager -l
+
 echo ""
-echo "=== Testing MCP endpoint ==="
-curl -s --max-time 5 http://localhost:8001/mcp || echo "MCP server starting (may take a moment)"
-echo ""
-echo "=== Done! ==="
-echo "MCP Server: http://87.199.198.120:8001/mcp"
+echo "=== MCP Server: http://87.199.198.120:8001/mcp ==="
