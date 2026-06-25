@@ -1,9 +1,33 @@
 const API_BASE = '/api';
-const API_KEY = 'devops-2match-secret-2026';
+
+// API Key — берём из sessionStorage или просим ввести
+function getApiKey() {
+    let key = sessionStorage.getItem('devops_api_key');
+    if (!key) {
+        key = prompt('🔑 Enter API Key:', '');
+        if (!key) { alert('API Key required'); return null; }
+        sessionStorage.setItem('devops_api_key', key);
+    }
+    return key;
+}
+
+function clearApiKey() {
+    sessionStorage.removeItem('devops_api_key');
+    location.reload();
+}
 
 function apiFetch(url, options = {}) {
-    options.headers = { 'X-API-Key': API_KEY, 'Content-Type': 'application/json', ...options.headers };
-    return fetch(url, options);
+    const key = getApiKey();
+    if (!key) return Promise.reject(new Error('No API key'));
+    options.headers = { 'X-API-Key': key, 'Content-Type': 'application/json', ...options.headers };
+    return fetch(url, options).then(resp => {
+        if (resp.status === 403) {
+            sessionStorage.removeItem('devops_api_key');
+            alert('❌ Invalid API Key. Please reload and try again.');
+            throw new Error('Invalid API key');
+        }
+        return resp;
+    });
 }
 
 // ============= TABS =============
@@ -48,7 +72,7 @@ function generateTaskJSON() {
             task.params = { command: document.getElementById('ssh-command').value, timeout: parseInt(document.getElementById('ssh-timeout').value) };
             break;
         case 'chain':
-            try { task.chain = JSON.parse(document.getElementById('chain-tasks').value); } 
+            try { task.chain = JSON.parse(document.getElementById('chain-tasks').value); }
             catch(e) { alert('Invalid JSON'); return; }
             break;
         case 'vdsina_get_balance':
@@ -116,10 +140,10 @@ function generateTaskJSON() {
         case 'server_run_script':
             task.target = document.getElementById('script-server').value;
             task.params = {};
-            const url = document.getElementById('script-url').value;
-            const content = document.getElementById('script-content').value;
-            if (url) task.params.script_url = url;
-            else if (content) task.params.script = content;
+            const scriptUrl = document.getElementById('script-url').value;
+            const scriptContent = document.getElementById('script-content').value;
+            if (scriptUrl) task.params.script_url = scriptUrl;
+            else if (scriptContent) task.params.script = scriptContent;
             break;
     }
 
@@ -135,7 +159,7 @@ async function submitTask() {
         const resp = await apiFetch(`${API_BASE}/tasks`, { method: 'POST', body: JSON.stringify(task) });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const result = await resp.json();
-        alert(`✅ Task created: ${result.task_id}\n\nГо в Tasks History для результата.`);
+        alert(`✅ Task created: ${result.task_id}\n\nCheck Tasks History for result.`);
     } catch(e) {
         alert(`❌ Error: ${e.message}`);
     }
@@ -164,11 +188,10 @@ async function loadTasks() {
     try {
         const resp = await apiFetch(`${API_BASE}/tasks`);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        let taskIds = await resp.json();
+        const taskIds = await resp.json();
 
         const statusFilter = document.getElementById('status-filter').value;
 
-        // Загружаем детали параллельно
         const tasks = (await Promise.all(
             taskIds.slice(0, 100).map(id =>
                 apiFetch(`${API_BASE}/tasks/${id}`).then(r => r.ok ? r.json() : null).catch(() => null)
@@ -198,7 +221,6 @@ function renderTaskCard(task) {
     const ts = new Date(task.timestamp).toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit' });
     const execTime = task.execution_time ? `${task.execution_time.toFixed(2)}s` : '—';
 
-    // Восстанавливаем входящий JSON из результата
     const inputJson = {
         task_id: task.task_id,
         action: task.action || '—',
@@ -206,10 +228,13 @@ function renderTaskCard(task) {
         ...(task.params ? { params: task.params } : {}),
     };
 
+    // Экранируем task_id для использования в id атрибуте
+    const safeId = task.task_id.replace(/[^a-zA-Z0-9-_]/g, '_');
+
     return `
     <div class="task-card">
-        <div class="task-header" onclick="toggleTask('${task.task_id}')">
-            <div style="display:flex; align-items:center; gap:10px;">
+        <div class="task-header" onclick="toggleTask('${safeId}')">
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                 <span class="task-id">${task.task_id}</span>
                 <span class="action-badge">${task.action || '—'}</span>
             </div>
@@ -220,7 +245,7 @@ function renderTaskCard(task) {
                 <span style="color:#555;">▼</span>
             </div>
         </div>
-        <div class="task-body" id="task-body-${task.task_id}">
+        <div class="task-body" id="task-body-${safeId}">
             <div class="task-meta">
                 <span>⏱ ${execTime}</span>
                 <span>🕐 ${ts}</span>
@@ -241,9 +266,9 @@ function renderTaskCard(task) {
     </div>`;
 }
 
-function toggleTask(taskId) {
-    const body = document.getElementById(`task-body-${taskId}`);
-    body.classList.toggle('open');
+function toggleTask(safeId) {
+    const body = document.getElementById(`task-body-${safeId}`);
+    if (body) body.classList.toggle('open');
 }
 
 function escapeHtml(str) {
@@ -257,7 +282,6 @@ async function loadVDSina() {
     container.innerHTML = '<p style="color:#555;">Loading VDSina data...</p>';
 
     try {
-        // Запускаем параллельно
         const [balanceResp, serversResp, keysResp] = await Promise.all([
             submitAndPoll('vdsina-balance-ui', 'vdsina_get_balance', {}),
             submitAndPoll('vdsina-servers-ui', 'vdsina_list_servers', {}),
@@ -277,7 +301,6 @@ async function loadVDSina() {
                     <div class="vdsina-stat"><div class="label">Partner</div><div class="value">${balance.partner || '0'} ₽</div></div>
                 </div>
             </div>
-
             <div class="vdsina-card">
                 <h4>🖥️ Servers (${servers.length})</h4>
                 ${servers.length === 0 ? '<p style="color:#555;">No servers</p>' : servers.map(s => `
@@ -287,13 +310,12 @@ async function loadVDSina() {
                             <span style="color:#555; font-size:12px; margin-left:10px;">ID: ${s.id}</span>
                         </div>
                         <div style="display:flex; gap:8px; align-items:center;">
-                            ${s.ip ? `<span style="color:#ccc; font-size:13px;">${Array.isArray(s.ip) ? s.ip[0]?.ip || '—' : s.ip}</span>` : ''}
+                            ${s.ip ? `<span style="color:#ccc; font-size:13px;">${Array.isArray(s.ip) ? (s.ip[0]?.ip || '—') : s.ip}</span>` : ''}
                             <span class="badge ${s.status === 'active' ? 'badge-success' : 'badge-warning'}">${s.status || 'unknown'}</span>
                         </div>
                     </div>
                 `).join('')}
             </div>
-
             <div class="vdsina-card">
                 <h4>🔑 SSH Keys (${keys.length})</h4>
                 ${keys.length === 0 ? '<p style="color:#555;">No SSH keys</p>' : keys.map(k => `
@@ -305,16 +327,15 @@ async function loadVDSina() {
             </div>
         `;
     } catch(e) {
-        container.innerHTML = `<p style="color:#f44336;">Error loading VDSina data: ${e.message}</p>`;
+        container.innerHTML = `<p style="color:#f44336;">Error: ${e.message}</p>`;
     }
 }
 
 async function submitAndPoll(taskId, action, params) {
     const task = { task_id: taskId, action, params };
     await apiFetch(`${API_BASE}/tasks`, { method: 'POST', body: JSON.stringify(task) });
-    
-    for (let i = 0; i < 15; i++) {
-        await new Promise(r => setTimeout(r, 1000));
+    for (let i = 0; i < 20; i++) {
+        await new Promise(r => setTimeout(r, 1500));
         const r = await apiFetch(`${API_BASE}/tasks/${taskId}`);
         if (r.ok) {
             const data = await r.json();
@@ -351,7 +372,7 @@ function renderServers(servers) {
                     <button onclick="deleteServer('${s.id}')" class="btn btn-danger btn-sm">Delete</button>
                 </div>
             </div>
-            ${s.tags?.length ? `<div style="margin-top:8px;">${s.tags.map(t => `<span style="background:#1e2a3a; color:#7eb8f7; padding:2px 8px; border-radius:4px; font-size:11px; margin-right:4px;">${t}</span>`).join('')}</div>` : ''}
+            ${s.tags?.length ? `<div style="margin-top:8px;">${s.tags.map(t => `<span style="background:#1e2a3a;color:#7eb8f7;padding:2px 8px;border-radius:4px;font-size:11px;margin-right:4px;">${t}</span>`).join('')}</div>` : ''}
         </div>
     `).join('');
 }
@@ -365,10 +386,10 @@ function updateServerSelects(servers) {
 }
 
 function showAddServerForm() {
-    const id = prompt('Server ID (e.g. vds-main):'); if (!id) return;
+    const id = prompt('Server ID:'); if (!id) return;
     const name = prompt('Name:'); if (!name) return;
     const ip = prompt('IP:'); if (!ip) return;
-    const key = prompt('SSH Key Name (from credentials.json):'); if (!key) return;
+    const key = prompt('SSH Key Name:'); if (!key) return;
     addServer({ id, name, ip, ssh_port: 22, ssh_user: 'root', ssh_key_name: key, tags: [], services: [], is_active: true });
 }
 
@@ -382,10 +403,8 @@ async function addServer(server) {
 
 async function deleteServer(id) {
     if (!confirm(`Delete ${id}?`)) return;
-    try {
-        await apiFetch(`${API_BASE}/servers/${id}`, { method: 'DELETE' });
-        loadServers();
-    } catch(e) { alert(`Error: ${e.message}`); }
+    try { await apiFetch(`${API_BASE}/servers/${id}`, { method: 'DELETE' }); loadServers(); }
+    catch(e) { alert(`Error: ${e.message}`); }
 }
 
 // ============= SERVICES =============
@@ -399,7 +418,7 @@ async function loadServices() {
         el.innerHTML = services.map(s => `
             <div class="vdsina-card">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div><h4 style="margin:0 0 4px;">${s.name}</h4><span style="color:#555; font-size:12px;">${s.stack} | ${s.deploy_path}</span></div>
+                    <div><h4 style="margin:0 0 4px;">${s.name}</h4><span style="color:#555;font-size:12px;">${s.stack} | ${s.deploy_path}</span></div>
                     <div style="display:flex; gap:8px;">
                         <span class="badge ${s.is_active ? 'badge-success' : 'badge-danger'}">${s.is_active ? 'Active' : 'Inactive'}</span>
                         <button onclick="deleteService('${s.id}')" class="btn btn-danger btn-sm">Delete</button>
@@ -413,7 +432,7 @@ async function loadServices() {
 function showAddServiceForm() {
     const id = prompt('Service ID:'); if (!id) return;
     const name = prompt('Name:'); if (!name) return;
-    const stack = prompt('Stack (e.g. node:18-alpine):'); if (!stack) return;
+    const stack = prompt('Stack:'); if (!stack) return;
     const path = prompt('Deploy Path:'); if (!path) return;
     const cmd = prompt('Start Command:'); if (!cmd) return;
     addService({ id, name, stack, deploy_path: path, start_command: cmd, is_active: true });
@@ -429,10 +448,8 @@ async function addService(service) {
 
 async function deleteService(id) {
     if (!confirm(`Delete ${id}?`)) return;
-    try {
-        await apiFetch(`${API_BASE}/services/${id}`, { method: 'DELETE' });
-        loadServices();
-    } catch(e) { alert(`Error: ${e.message}`); }
+    try { await apiFetch(`${API_BASE}/services/${id}`, { method: 'DELETE' }); loadServices(); }
+    catch(e) { alert(`Error: ${e.message}`); }
 }
 
 // ============= INIT =============
